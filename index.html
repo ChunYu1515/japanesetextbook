@@ -2,7 +2,7 @@
 <title>清雨日文學習系統</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Klee+One&display=swap">
 <style>
 /* 版面：頂部導覽＋單欄內容；首頁＝今日任務→一週節奏帶→四階段路線；課程頁＝週選擇＋七日分頁 */
 :root{
@@ -214,6 +214,20 @@ input[type=range]{accent-color:var(--accent);width:180px;max-width:100%}
 .mdiff .hit{color:var(--sage)}.mdiff .miss{color:var(--rose);text-decoration:underline;font-weight:700}
 .micnote{background:var(--amber-soft);border-radius:10px;padding:10px 12px;color:var(--ink)}
 @media (prefers-reduced-motion: reduce){.mic.rec{animation:none}}
+.hwp{width:30px;height:30px;color:var(--muted)}
+.item.v .z{margin-left:auto}
+.hw{position:fixed;inset:0;z-index:20;background:color-mix(in srgb,var(--ink) 45%,transparent);display:flex;align-items:center;justify-content:center;padding:16px}
+.hw[hidden]{display:none}
+body.hw-open{overflow:hidden}
+.hw-box{background:var(--surface);border-radius:18px;padding:16px;max-width:600px;width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:12px;align-items:center;border:1px solid var(--line)}
+.hw-head{display:flex;gap:12px;align-items:center;width:100%}
+.hw-t{flex:1;min-width:0}
+.hw-big{font-size:26px;line-height:1.3;overflow-wrap:anywhere}
+.hw-stage{position:relative;touch-action:none;border-radius:6px;overflow:hidden;flex:none}
+.hw-stage canvas{position:absolute;inset:0;touch-action:none}
+#hwInk{cursor:crosshair}
+.hw-tools,.hw-nav,.hw-opts{justify-content:center}
+.hw-nav{width:100%;justify-content:space-between}
 </style>
 
 <header>
@@ -776,20 +790,20 @@ const rdOf=(jp,rd)=>rd||jp;
 function itemHTML(jp,rd,zh,cls="v"){
  const r=rdOf(jp,rd);const showR=rd&&rd.replace(/\s/g,"")!==jp.replace(/\s/g,"");
  return `<div class="item ${cls}" data-t="${esc(jp)}"><button class="say" data-say="${esc(jp)}" aria-label="播放">${SAY_ICON}</button>
- <div class="body"><div class="j">${esc(jp)}</div>${showR?`<div class="r">${esc(r)}</div>`:""}${/[\u3400-\u9fff]/.test(r)?"":`<div class="ro">${esc(romaji(r))}</div>`}${cls==="sent"?`<div class="z">${esc(zh)}</div>`:""}</div>${cls==="v"?`<div class="z">${esc(zh)}</div>`:""}${cls==="sent"?micBtn(jp,rd,zh):""}</div>`;
+ <div class="body"><div class="j">${esc(jp)}</div>${showR?`<div class="r">${esc(r)}</div>`:""}${/[\u3400-\u9fff]/.test(r)?"":`<div class="ro">${esc(romaji(r))}</div>`}${cls==="sent"?`<div class="z">${esc(zh)}</div>`:""}</div>${cls==="v"?`<div class="z">${esc(zh)}</div><button class="say hwp" data-hwj="${esc(jp)}" data-hwr="${esc(rd||"")}" data-hwz="${esc(zh)}" aria-label="手寫練習" title="手寫練習">${PEN_ICON}</button>`:""}${cls==="sent"?micBtn(jp,rd,zh):""}</div>`;
 }
 const vocabHTML=w=>w.v.map(v=>itemHTML(v[0],v[1],v[2],"v")).join("");
 const sentHTML=w=>w.s.map(s=>itemHTML(s[0],s[1],s[2],"sent")).join("");
 function plBtn(target,label,reps=1,shadow=false){return `<button class="btn sm" data-plbtn data-label="${esc(label)}" data-pl="${target}" data-reps="${reps}" data-shadow="${shadow?1:""}">${esc(label)}</button>`}
 function secH(title,min,extra=""){return `<div class="sec-h"><h2>${title}</h2>${min?`<span class="min">${min}</span>`:""}${extra}</div>`}
 function doneBtn(n,k){const d=wk(n)[k];return `<div class="row"><button class="btn ${d?"ok":"pri"}" data-done="${n}|${k}">${d?"✓ 已完成，再按一次取消":"完成今天的練習"}</button>${d?`<span class="muted small">做得好，明天見。</span>`:""}</div>`}
-function kanaCells(chars,romaFn){return chars.map(c=>c==="・"?`<span class="kc blank"></span>`:`<button class="kc" data-say="${esc(c)}"><span class="k">${esc(c)}</span><span class="kr">${esc(romaFn(c))}</span></button>`).join("")}
+function kanaCells(chars,romaFn){return chars.map(c=>c==="・"?`<span class="kc blank"></span>`:`<button class="kc" data-say="${esc(c)}" data-kc="${esc(c)}"><span class="k">${esc(c)}</span><span class="kr">${esc(romaFn(c))}</span></button>`).join("")}
 function kanaBlock(keys){
  let h="";
  keys.forEach(k=>{
-  if(KROWS[k])h+=`<div class="stack" style="gap:6px"><h3>${KROWNAME[k]}</h3><div class="kgrid">${kanaCells([...KROWS[k]],c=>conv(c))}</div></div>`;
-  if(k==="K"){h+=`<div class="stack" style="gap:6px"><h3>片假名・基本 46 音</h3><div class="kgrid">${kanaCells([...BASIC.map(x=>KROWS[x]).join("")].map(toKata),c=>conv(c))}</div><h3>片假名・濁音／半濁音</h3><div class="kgrid">${kanaCells([...DAKU.map(x=>KROWS[x]).join("")].map(toKata),c=>conv(c))}</div></div>`}
-  if(k==="yo"){h+=`<div class="stack" style="gap:6px"><h3>拗音（平假名／片假名）</h3><div class="kgrid y">${kanaCells(YOON,c=>conv(c))}</div><div class="kgrid y">${kanaCells(YOON.map(toKata),c=>conv(c))}</div></div>`}
+  if(KROWS[k])h+=`<div class="stack" style="gap:6px"><div class="sec-h"><h3>${KROWNAME[k]}</h3>${hwSetBtn([...KROWS[k]].filter(c=>c!=="・"))}</div><div class="kgrid">${kanaCells([...KROWS[k]],c=>conv(c))}</div></div>`;
+  if(k==="K"){h+=`<div class="stack" style="gap:6px"><div class="sec-h"><h3>片假名・基本 46 音</h3>${hwSetBtn([...BASIC.map(x=>KROWS[x]).join("")].filter(c=>c!=="・").map(toKata))}</div><div class="kgrid">${kanaCells([...BASIC.map(x=>KROWS[x]).join("")].map(toKata),c=>conv(c))}</div><h3>片假名・濁音／半濁音</h3><div class="kgrid">${kanaCells([...DAKU.map(x=>KROWS[x]).join("")].map(toKata),c=>conv(c))}</div></div>`}
+  if(k==="yo"){h+=`<div class="stack" style="gap:6px"><div class="sec-h"><h3>拗音（平假名／片假名）</h3>${hwSetBtn(YOON.concat(YOON.map(toKata)))}</div><div class="kgrid y">${kanaCells(YOON,c=>conv(c))}</div><div class="kgrid y">${kanaCells(YOON.map(toKata),c=>conv(c))}</div></div>`}
   if(k==="x"){h+=`<div class="stack" style="gap:0"><h3>促音・長音・撥音</h3>${SPECIAL.map(s=>itemHTML(s[1]||s[0],s[1]?s[0]:"",s[2],"v")).join("")}</div>`}
  });
  return h;
@@ -1087,11 +1101,11 @@ function renderKana(){
  const tf=KV==="k"?toKata:(x=>x);
  $("#v-kana").innerHTML=`
  <div class="card stack" style="gap:8px"><h1>五十音表</h1><p class="muted">點任何一格聽發音。W01–W03 會依序學完；之後遇到忘記的字，回來這裡查。</p>
- <div class="row"><button class="btn sm ${KV==="h"?"pri":""}" data-kv="h">平假名</button><button class="btn sm ${KV==="k"?"pri":""}" data-kv="k">片假名</button><button class="btn sm" data-kq>隨機 10 題認字</button></div></div>
+ <div class="row"><button class="btn sm ${KV==="h"?"pri":""}" data-kv="h">平假名</button><button class="btn sm ${KV==="k"?"pri":""}" data-kv="k">片假名</button><button class="btn sm" data-kq>隨機 10 題認字</button><button class="btn sm ${HWMODE?"pri":""}" data-hwmode>${PEN_ICON} 點格子直接手寫：${HWMODE?"開":"關"}</button></div></div>
  <div class="card stack" id="kq" hidden></div>
- <div class="card stack"><h2>清音</h2><div class="kgrid">${kanaCells([...BASIC.map(x=>KROWS[x]).join("")].map(tf),conv1)}</div></div>
- <div class="card stack"><h2>濁音・半濁音</h2><div class="kgrid">${kanaCells([...DAKU.map(x=>KROWS[x]).join("")].map(tf),conv1)}</div></div>
- <div class="card stack"><h2>拗音</h2><div class="kgrid y">${kanaCells(YOON.map(tf),conv1)}</div></div>
+ <div class="card stack"><div class="sec-h"><h2>清音</h2>${hwSetBtn([...BASIC.map(x=>KROWS[x]).join("")].filter(c=>c!=="・").map(tf))}</div><div class="kgrid">${kanaCells([...BASIC.map(x=>KROWS[x]).join("")].map(tf),conv1)}</div></div>
+ <div class="card stack"><div class="sec-h"><h2>濁音・半濁音</h2>${hwSetBtn([...DAKU.map(x=>KROWS[x]).join("")].filter(c=>c!=="・").map(tf))}</div><div class="kgrid">${kanaCells([...DAKU.map(x=>KROWS[x]).join("")].map(tf),conv1)}</div></div>
+ <div class="card stack"><div class="sec-h"><h2>拗音</h2>${hwSetBtn(YOON.map(tf))}</div><div class="kgrid y">${kanaCells(YOON.map(tf),conv1)}</div></div>
  <div class="card stack" style="gap:0"><h2 style="margin-bottom:8px">促音・長音・撥音</h2>${SPECIAL.map(s=>itemHTML(s[1]||s[0],s[1]?s[0]:"",s[2],"v")).join("")}</div>`;
 }
 function kanaQuiz(){
@@ -1142,6 +1156,112 @@ function renderProg(){
 }
 function applySet(){document.body.classList.toggle("hide-rd",!S.set.rd);document.body.classList.toggle("hide-ro",!S.set.ro)}
 
+/* ================= 手寫練習彈窗 ================= */
+const PEN_ICON='<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M11.9 1.6a1.5 1.5 0 0 1 2.1 0l.4.4a1.5 1.5 0 0 1 0 2.1L5.6 12.9 2 14l1.1-3.6zM3.9 11.2l-.5 1.4 1.4-.5z"/></svg>';
+let HW=null,HWMODE=false;
+function hwSetBtn(units,label){return `<button class="btn sm hwbtn" data-hwset="${esc(units.join("|"))}">${PEN_ICON} ${label||"手寫練習"}</button>`}
+function hwEnsure(){
+ if(document.getElementById("hw"))return;
+ const d=document.createElement("div");d.id="hw";d.className="hw";d.hidden=true;d.setAttribute("role","dialog");d.setAttribute("aria-modal","true");d.setAttribute("aria-label","手寫練習");
+ d.innerHTML=`<div class="hw-box">
+  <div class="hw-head"><button class="say" id="hwSay" aria-label="播放">${SAY_ICON}</button><div class="hw-t"><div class="hw-big jp" id="hwBig"></div><div class="small muted" id="hwInfo"></div></div><button class="btn sm ghost" id="hwX" aria-label="關閉">關閉</button></div>
+  <div class="row hw-opts" id="hwOpts"></div>
+  <div class="hw-stage" id="hwStage"><canvas id="hwBg"></canvas><canvas id="hwInk"></canvas></div>
+  <div class="row hw-tools"><button class="btn sm" id="hwUndo">復原一筆</button><button class="btn sm" id="hwClr">清除</button><label class="switch small"><input type="checkbox" id="hwTrace" checked> 描紅（淡色範本）</label><button class="btn sm" id="hwCmp">對照範本</button></div>
+  <div class="row hw-nav"><button class="btn" id="hwPrev">‹ 上一個</button><span class="chip" id="hwPos"></span><button class="btn pri" id="hwNext">寫好了，下一個 ›</button></div>
+  <p class="small muted" id="hwTip">先描紅寫 3 次，再關掉描紅自己寫，最後按「對照範本」檢查形狀。</p>
+ </div>`;
+ document.body.appendChild(d);
+ d.addEventListener("click",e=>{if(e.target===d)hwClose()});
+ $("#hwX").onclick=hwClose;
+ $("#hwSay").onclick=()=>speak(HW.list[HW.i].say);
+ $("#hwUndo").onclick=()=>{HW.strokes.pop();hwInk()};
+ $("#hwClr").onclick=()=>{HW.strokes=[];hwInk()};
+ $("#hwTrace").onchange=e=>{HW.trace=e.target.checked;hwBg()};
+ $("#hwCmp").onclick=()=>{HW.cmp=!HW.cmp;$("#hwCmp").classList.toggle("pri",HW.cmp);hwInk()};
+ $("#hwPrev").onclick=()=>hwGo(-1);
+ $("#hwNext").onclick=()=>{if(HW.strokes.length){const k=HW.list[HW.i].key;S.hw=S.hw||{};S.hw[k]=(S.hw[k]||0)+1;save()}hwGo(1)};
+ document.addEventListener("keydown",e=>{if(!HW||d.hidden)return;if(e.key==="Escape")hwClose();if((e.metaKey||e.ctrlKey)&&e.key==="z"){e.preventDefault();HW.strokes.pop();hwInk()}});
+ const ink=$("#hwInk");let cur=null;
+ const pt=e=>{const r=ink.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top,e.pressure&&e.pointerType==="pen"?e.pressure:0.5]};
+ ink.addEventListener("pointerdown",e=>{e.preventDefault();ink.setPointerCapture(e.pointerId);cur=[pt(e)];HW.strokes.push(cur);hwInk()});
+ ink.addEventListener("pointermove",e=>{if(!cur)return;e.preventDefault();(e.getCoalescedEvents?e.getCoalescedEvents():[e]).forEach(ev=>cur.push(pt(ev)));hwInk()});
+ const up=()=>{cur=null};ink.addEventListener("pointerup",up);ink.addEventListener("pointercancel",up);
+ window.addEventListener("resize",()=>{if(HW&&!d.hidden)hwLayout()});
+}
+/* list: [{t:要寫的字, say:播放文字, info:說明, key:紀錄用, alt:另一種寫法(漢字)}] */
+function hwOpen(list,i){
+ hwEnsure();stopPL();
+ HW={list,i:i||0,strokes:[],trace:true,cmp:false,useAlt:false};
+ $("#hwTrace").checked=true;$("#hwCmp").classList.remove("pri");
+ const d=$("#hw");d.hidden=false;document.body.classList.add("hw-open");
+ const go=()=>{hwShow();speak(list[HW.i].say)};
+ if(document.fonts&&document.fonts.load)document.fonts.load('400 80px "Klee One"',list.map(x=>x.t+(x.alt||"")).join("")).then(go,go);else go();
+}
+function hwClose(){const d=$("#hw");if(d)d.hidden=true;document.body.classList.remove("hw-open");stopAudio();if(CUR==="prog")renderProg()}
+function hwGo(step){const n=HW.list.length;HW.i=(HW.i+step+n)%n;HW.strokes=[];HW.cmp=false;HW.useAlt=false;$("#hwCmp").classList.remove("pri");hwShow();speak(HW.list[HW.i].say)}
+function hwText(){const it=HW.list[HW.i];return HW.useAlt&&it.alt?it.alt:it.t}
+function hwShow(){
+ const it=HW.list[HW.i];
+ $("#hwBig").textContent=it.alt?`${it.t}（${it.alt}）`:it.t;
+ const cnt=(S.hw||{})[it.key]||0;
+ $("#hwInfo").textContent=[it.info,cnt?`已練 ${cnt} 次`:""].filter(Boolean).join("｜");
+ $("#hwPos").textContent=`${HW.i+1} / ${HW.list.length}`;
+ $("#hwPrev").disabled=$("#hwNext").disabled=false;
+ $("#hwOpts").innerHTML=it.alt?`<button class="btn sm ${HW.useAlt?"":"pri"}" data-hwalt="0">寫假名</button><button class="btn sm ${HW.useAlt?"pri":""}" data-hwalt="1">寫漢字</button>`:"";
+ $("#hwOpts").querySelectorAll("[data-hwalt]").forEach(b=>b.onclick=()=>{HW.useAlt=b.dataset.hwalt==="1";HW.strokes=[];hwShow()});
+ hwLayout();
+}
+function hwLayout(){
+ const chars=[...hwText()];const n=chars.length;
+ const avail=Math.min(560,window.innerWidth-64);
+ const per=n===1?1:Math.min(n,avail<420?4:6);
+ const cell=n===1?Math.min(300,avail):Math.floor(Math.min(150,avail/per));
+ const rows=Math.ceil(n/per);
+ HW.geo={chars,per,cell,w:cell*per,h:cell*rows};
+ const dpr=window.devicePixelRatio||1;
+ ["hwBg","hwInk"].forEach(id=>{const c=$("#"+id);c.width=HW.geo.w*dpr;c.height=HW.geo.h*dpr;c.style.width=HW.geo.w+"px";c.style.height=HW.geo.h+"px";c.getContext("2d").setTransform(dpr,0,0,dpr,0,0)});
+ $("#hwStage").style.width=HW.geo.w+"px";$("#hwStage").style.height=HW.geo.h+"px";
+ hwBg();hwInk();
+}
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hwTemplate(ctx,color,alpha){
+ const {chars,per,cell}=HW.geo;ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.font=`400 ${Math.round(cell*0.78)}px "Klee One","Hiragino Mincho ProN","Yu Mincho",serif`;
+ chars.forEach((c,i)=>{const x=(i%per)*cell+cell/2,y=Math.floor(i/per)*cell+cell/2+cell*0.03;ctx.fillText(c,x,y)});ctx.restore();
+}
+function hwBg(){
+ const c=$("#hwBg"),ctx=c.getContext("2d"),{chars,per,cell,w,h}=HW.geo;
+ ctx.clearRect(0,0,w,h);ctx.fillStyle=cssv("--surface");ctx.fillRect(0,0,w,h);
+ chars.forEach((_,i)=>{const x=(i%per)*cell,y=Math.floor(i/per)*cell;
+  ctx.strokeStyle=cssv("--line");ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.strokeRect(x+.75,y+.75,cell-1.5,cell-1.5);
+  ctx.setLineDash([5,5]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+cell/2,y+6);ctx.lineTo(x+cell/2,y+cell-6);ctx.moveTo(x+6,y+cell/2);ctx.lineTo(x+cell-6,y+cell/2);ctx.stroke();});
+ ctx.setLineDash([]);
+ if(HW.trace)hwTemplate(ctx,cssv("--muted"),0.22);
+}
+function hwInk(){
+ const c=$("#hwInk"),ctx=c.getContext("2d"),{w,h,cell}=HW.geo;ctx.clearRect(0,0,w,h);
+ const base=Math.max(3,cell/22);ctx.strokeStyle=cssv("--ink");ctx.fillStyle=cssv("--ink");ctx.lineCap="round";ctx.lineJoin="round";
+ HW.strokes.forEach(s=>{
+  if(s.length===1){ctx.beginPath();ctx.arc(s[0][0],s[0][1],base/2,0,7);ctx.fill();return}
+  for(let i=1;i<s.length;i++){const a=s[i-1],b=s[i];ctx.lineWidth=base*(0.6+b[2]*0.8);ctx.beginPath();
+   if(i>1){const p=s[i-2];ctx.moveTo((p[0]+a[0])/2,(p[1]+a[1])/2);ctx.quadraticCurveTo(a[0],a[1],(a[0]+b[0])/2,(a[1]+b[1])/2)}else{ctx.moveTo(a[0],a[1]);ctx.lineTo((a[0]+b[0])/2,(a[1]+b[1])/2)}
+   ctx.stroke()}
+ });
+ if(HW.cmp)hwTemplate(ctx,cssv("--rose"),0.45);
+}
+/* 由清單元素建立手寫清單 */
+function hwFromItems(btn){
+ const host=btn.closest(".hwlist")||btn.closest(".item")?.parentElement;
+ const btns=[...host.querySelectorAll("[data-hwj]")];
+ const list=btns.map(b=>{const j=b.dataset.hwj,r=(b.dataset.hwr||"").replace(/\s+/g,"");const hasK=/[㐀-鿿]/.test(j);
+  return {t:hasK&&r?r:j,alt:hasK&&r?j:null,say:j,info:b.dataset.hwz||"",key:j}});
+ hwOpen(list,Math.max(0,btns.indexOf(btn)));
+}
+function hwFromSet(str,start){
+ const units=str.split("|");hwOpen(units.map(u=>({t:u,say:u,info:conv(u),key:u})),start||0);
+}
+
 /* ================= 導覽與事件 ================= */
 let CUR="home";
 function show(v){
@@ -1155,6 +1275,10 @@ document.addEventListener("click",e=>{
  const t=e.target.closest("button,[data-go],.cover .item");if(!t)return;
  const d=t.dataset;
  if(t.matches(".cover .item")&&!t.closest("button")){t.classList.toggle("shown");return}
+ if(d.hwset){hwFromSet(d.hwset);return}
+ if(d.hwj!==undefined){hwFromItems(t);return}
+ if(d.hwmode!==undefined){HWMODE=!HWMODE;renderKana();return}
+ if(d.kc&&HWMODE){const g=[...t.closest(".kgrid").querySelectorAll("[data-kc]")];hwFromSet(g.map(x=>x.dataset.kc).join("|"),g.indexOf(t));return}
  if(d.mic!==undefined){startMic(t);return}
  if(d.copyvp!==undefined){const ta=$("#vp");const done=()=>{$("#vpSt").textContent="已複製，貼到 Claude 語音模式即可"};try{navigator.clipboard.writeText(ta.value).then(done,()=>{ta.focus();ta.select();$("#vpSt").textContent="請按 ⌘C 複製已選取的文字"})}catch(e){ta.focus();ta.select();$("#vpSt").textContent="請按 ⌘C 複製已選取的文字"}return}
  if(d.view){show(d.view);return}
